@@ -843,31 +843,27 @@ let sectorChanges = {};
 let _sinaLoaded = {};   // code -> {now, prev, change}
 let _sinaScripts = [];  // keep refs to avoid GC
 
-// ── Fetch sector data via multiple proxy fallbacks ──
-const PROXIES = [
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-];
+// ── Fetch sector data via Cloudflare Worker ──
+const WORKER_URL = 'https://sina-proxy.picwhi.workers.dev';
 
 async function fetchSinaText(sinaUrl) {
-  for (const proxyFn of PROXIES) {
+  const codes = sinaUrl.split('list=')[1] || '';
+  try {
+    const r = await fetch(`${WORKER_URL}?codes=${encodeURIComponent(codes)}`, {
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!r.ok) return '';
+    // Sina returns GBK - read as arraybuffer and decode properly
+    const buf = await r.arrayBuffer();
     try {
-      const proxyUrl = proxyFn(sinaUrl);
-      const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(6000) });
-      if (!r.ok) continue;
-      const data = await r.json().catch(() => null);
-      // allorigins wraps in {contents:...}
-      if (data && data.contents) return data.contents;
-      // codetabs returns text directly as json string sometimes
-      const text = typeof data === 'string' ? data : await r.text().catch(() => '');
-      if (text && text.includes('hq_str_')) return text;
-      // corsproxy returns raw text
-      const raw = await fetch(proxyFn(sinaUrl)).then(x => x.text()).catch(() => '');
-      if (raw && raw.includes('hq_str_')) return raw;
-    } catch(e) { /* try next */ }
+      const text = new TextDecoder('gbk').decode(buf);
+      return text;
+    } catch(e) {
+      return new TextDecoder('utf-8').decode(buf);
+    }
+  } catch(e) {
+    return '';
   }
-  return '';
 }
 
 function parseSinaText(text) {
@@ -893,7 +889,10 @@ async function fetchSectorChanges() {
   for (let i = 0; i < allCodes.length; i += 20) batches.push(allCodes.slice(i, i + 20));
 
   await Promise.all(batches.map(async batch => {
-    const sinaVars = batch.map(c => (c.startsWith('6') ? 'sh' : 'sz') + c).join(',');
+    const sinaVars = batch.map(c => {
+      // Shanghai: 6xxxxx | Shenzhen: 0xxxxx, 3xxxxx, 2xxxxx
+      return (c.startsWith('6') ? 'sh' : 'sz') + c;
+    }).join(',');
     const text = await fetchSinaText('https://hq.sinajs.cn/list=' + sinaVars);
     if (text) parseSinaText(text);
   }));
