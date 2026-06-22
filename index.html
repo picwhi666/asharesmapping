@@ -843,63 +843,66 @@ let sectorChanges = {};
 let _sinaLoaded = {};   // code -> {now, prev, change}
 let _sinaScripts = [];  // keep refs to avoid GC
 
-// ── JSONP loader (Script-tag, bypasses CORS) ──
-function loadSinaJSONP(codes) {
-  return new Promise((resolve) => {
-    const cbName = '__sina_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-    const sinaVar = codes.map(c => {
-      const prefix = c.startsWith('6') ? 'sh' : 'sz';
-      return prefix + c;
-    }).join(',');
+// ── Fetch sector data via multiple proxy fallbacks ──
+const PROXIES = [
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
 
-    // Sina returns: var hq_str_sh000001="name,open,prev,now,...";
-    // We intercept by polling window after script loads
-    const script = document.createElement('script');
-    script.src = 'https://hq.sinajs.cn/list=' + sinaVar;
-    script.onload = () => {
-      // Parse from global vars sina injects
-      codes.forEach(code => {
-        const prefix = code.startsWith('6') ? 'sh' : 'sz';
-        const varName = 'hq_str_' + prefix + code;
-        const raw = window[varName];
-        if (!raw) return;
-        const parts = raw.split(',');
-        if (parts.length < 4) return;
-        const prev = parseFloat(parts[2]);
-        const now  = parseFloat(parts[3]);
-        if (prev > 0) _sinaLoaded[code] = { now, prev, change: (now - prev) / prev * 100 };
-      });
-      resolve();
-    };
-    script.onerror = () => resolve(); // silent fail
-    document.head.appendChild(script);
-    _sinaScripts.push(script);
-    // Timeout safety
-    setTimeout(resolve, 6000);
-  });
+async function fetchSinaText(sinaUrl) {
+  for (const proxyFn of PROXIES) {
+    try {
+      const proxyUrl = proxyFn(sinaUrl);
+      const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(6000) });
+      if (!r.ok) continue;
+      const data = await r.json().catch(() => null);
+      // allorigins wraps in {contents:...}
+      if (data && data.contents) return data.contents;
+      // codetabs returns text directly as json string sometimes
+      const text = typeof data === 'string' ? data : await r.text().catch(() => '');
+      if (text && text.includes('hq_str_')) return text;
+      // corsproxy returns raw text
+      const raw = await fetch(proxyFn(sinaUrl)).then(x => x.text()).catch(() => '');
+      if (raw && raw.includes('hq_str_')) return raw;
+    } catch(e) { /* try next */ }
+  }
+  return '';
+}
+
+function parseSinaText(text) {
+  // var hq_str_sh300308="中际旭创,open,prev_close,now,..."
+  const re = /hq_str_s[hz](\d+)="([^"]*)"/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const code = m[1];
+    const parts = m[2].split(',');
+    if (parts.length < 4) continue;
+    const prev = parseFloat(parts[2]);
+    const now  = parseFloat(parts[3]);
+    if (prev > 0 && now > 0) {
+      _sinaLoaded[code] = { now, prev, change: (now - prev) / prev * 100 };
+    }
+  }
 }
 
 async function fetchSectorChanges() {
-  // Collect unique codes across all sectors
   const allCodes = [...new Set(Object.values(SECTOR_STOCKS).flat())];
-
-  // Split into batches of 20 (Sina limit)
+  // Batch into groups of 20
   const batches = [];
-  for (let i = 0; i < allCodes.length; i += 20) {
-    batches.push(allCodes.slice(i, i + 20));
-  }
+  for (let i = 0; i < allCodes.length; i += 20) batches.push(allCodes.slice(i, i + 20));
 
-  // Load all batches (JSONP, parallel)
-  await Promise.all(batches.map(batch => loadSinaJSONP(batch)));
+  await Promise.all(batches.map(async batch => {
+    const sinaVars = batch.map(c => (c.startsWith('6') ? 'sh' : 'sz') + c).join(',');
+    const text = await fetchSinaText('https://hq.sinajs.cn/list=' + sinaVars);
+    if (text) parseSinaText(text);
+  }));
 
-  // Compute per-sector averages
+  // Compute averages
   Object.entries(SECTOR_STOCKS).forEach(([id, codes]) => {
-    const vals = codes
-      .map(c => _sinaLoaded[c]?.change)
-      .filter(v => v !== undefined && !isNaN(v));
-    if (vals.length === 0) return;
-    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-    sectorChanges[id] = { avg, n: vals.length };
+    const vals = codes.map(c => _sinaLoaded[c]?.change).filter(v => v !== undefined && !isNaN(v));
+    if (!vals.length) return;
+    sectorChanges[id] = { avg: vals.reduce((a,b)=>a+b,0)/vals.length, n: vals.length };
   });
 
   updateSectorBadges();
@@ -943,7 +946,7 @@ startSectorRefresh();
       {proName:"SSE:000001", title:"上证指数"},
       {proName:"SZSE:399006", title:"创业板"},
       {proName:"SSE:000688", title:"科创50"},
-      {proName:"NASDAQ:NDX",  title:"纳斯达克"},
+      {proName:"NASDAQ:IXIC", title:"纳斯达克"},
       {proName:"SP:SPX",      title:"标普500"},
       {proName:"TVC:NI225",   title:"日经225"},
       {proName:"KRX:KOSPI",   title:"韩国综合"}
