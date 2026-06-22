@@ -939,7 +939,8 @@ function startSectorRefresh() {
 }
 
 init();
-startSectorRefresh();
+// Delay sector fetch slightly to let page render first
+setTimeout(startSectorRefresh, 2000);
 </script>
 <script>
 // ── TradingView Ticker Tape ──
@@ -953,8 +954,8 @@ startSectorRefresh();
       {proName:"SSE:000001", title:"上证指数"},
       {proName:"SZSE:399006", title:"创业板"},
       {proName:"SSE:000688", title:"科创50"},
-      {proName:"NASDAQ:IXIC", title:"纳斯达克"},
-      {proName:"SP:SPX",      title:"标普500"},
+      {proName:"FOREXCOM:NSXUSD", title:"纳斯达克"},
+      {proName:"FOREXCOM:SPXUSD", title:"标普500"},
       {proName:"TVC:NI225",   title:"日经225"},
       {proName:"KRX:KOSPI",   title:"韩国综合"}
     ],
