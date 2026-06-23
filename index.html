@@ -99,6 +99,7 @@
   .body-section { padding: 16px 18px; border-right: 1px solid var(--border); }
   .body-section:last-child { border-right: none; }
   .body-title { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; }
+  .body-title-lg { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1.5px solid var(--border-strong); }
   .logic-item { display: flex; gap: 8px; margin-bottom: 9px; font-size: 13px; line-height: 1.55; }
   .logic-num { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
   .logic-risk { font-size: 12px; color: var(--red); margin-top: 6px; padding: 6px 10px; background: var(--red-bg); border-radius: var(--radius-sm); line-height: 1.5; }
@@ -198,13 +199,29 @@
 
 <!-- ── Main Page ── -->
 <div id="mainPage">
-<!-- TradingView Ticker Tape via iframe -->
+<!-- TradingView Ticker Tape -->
 <div class="ticker-bar">
-  <iframe
-    src="https://s.tradingview.com/embed-widget/ticker-tape/?locale=zh_CN#%7B%22symbols%22%3A%20%5B%7B%22proName%22%3A%20%22SSE%3A000001%22%2C%20%22title%22%3A%20%22%E4%B8%8A%E8%AF%81%22%7D%2C%20%7B%22proName%22%3A%20%22SZSE%3A399006%22%2C%20%22title%22%3A%20%22%E5%88%9B%E4%B8%9A%E6%9D%BF%22%7D%2C%20%7B%22proName%22%3A%20%22SSE%3A000688%22%2C%20%22title%22%3A%20%22%E7%A7%91%E5%88%9B50%22%7D%2C%20%7B%22proName%22%3A%20%22FOREXCOM%3ANSXUSD%22%2C%20%22title%22%3A%20%22%E7%BA%B3%E6%96%AF%E8%BE%BE%E5%85%8B%22%7D%2C%20%7B%22proName%22%3A%20%22FOREXCOM%3ASPXUSD%22%2C%20%22title%22%3A%20%22%E6%A0%87%E6%99%AE500%22%7D%2C%20%7B%22proName%22%3A%20%22INDEX%3ANKY%22%2C%20%22title%22%3A%20%22%E6%97%A5%E7%BB%8F225%22%7D%2C%20%7B%22proName%22%3A%20%22INDEX%3AKOSPI%22%2C%20%22title%22%3A%20%22%E9%9F%A9%E5%9B%BD%E7%BB%BC%E5%90%88%22%7D%5D%2C%20%22showSymbolLogo%22%3A%20false%2C%20%22isTransparent%22%3A%20true%2C%20%22displayMode%22%3A%20%22adaptive%22%2C%20%22colorTheme%22%3A%20%22light%22%2C%20%22locale%22%3A%20%22zh_CN%22%7D"
-    style="width:100%;height:46px;border:none;display:block;"
-    allowtransparency="true">
-  </iframe>
+  <div class="tradingview-widget-container" style="height:46px;overflow:hidden">
+    <div class="tradingview-widget-container__widget"></div>
+    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+    {
+      "symbols": [
+        {"proName": "SSE:000001",       "title": "上证指数"},
+        {"proName": "SZSE:399006",      "title": "创业板"},
+        {"proName": "SSE:000688",       "title": "科创50"},
+        {"proName": "FOREXCOM:NSXUSD", "title": "纳斯达克"},
+        {"proName": "FOREXCOM:SPXUSD", "title": "标普500"},
+        {"proName": "TVC:NI225",        "title": "日经225"},
+        {"proName": "KRX:KOSPI",        "title": "韩国综合"}
+      ],
+      "showSymbolLogo": false,
+      "isTransparent": true,
+      "displayMode": "adaptive",
+      "colorTheme": "light",
+      "locale": "zh_CN"
+    }
+    </script>
+  </div>
 </div>
 <header>
   <div class="header-row1">
@@ -300,6 +317,7 @@
     <div class="form-row"><label>关注指标（格式：标签: 内容，每行一个）</label><textarea id="f-indicators" placeholder="需求: 英伟达平台Capex指引&#10;价格: 现货涨价幅度"></textarea></div>
     <div class="form-row"><label>催化剂 / 时间节点（每行一个）</label><textarea id="f-catalysts" placeholder="📅 英伟达GTC大会（每年3月）&#10;📊 龙头季报业绩预告"></textarea></div>
     <div class="form-row"><label>代表股票（格式：代码 名称 | 描述，每行一个）</label><textarea id="f-stocks" placeholder="300308 中际旭创 | 全球光模块龙头，CPO核心供应商"></textarea></div>
+    <div class="form-row"><label>细分题材（每个题材用 === 分隔，格式：题材名称 / 逻辑 / 股票代码1,股票代码2）</label><textarea id="f-subthemes" placeholder="光模块 / AI算力需求驱动，1.6T加速放量 / 300308,300502&#10;===&#10;光器件 / CPO产业链核心器件供应商 / 300394,688195"></textarea></div>
     <div class="edit-actions">
       <button class="btn" onclick="closeEdit()">取消</button>
       <button class="btn btn-primary" onclick="saveCard()">保存</button>
@@ -660,20 +678,34 @@ function renderCard(card, catId, q) {
     </div>
     <div class="card-body">
       <div class="def-row"><strong style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-right:8px">释义</strong>${highlight(card.definition,q)}</div>
+      ${(card.subthemes && card.subthemes.length > 0) ? `
+      <div style="grid-column:1/-1;padding:14px 18px;border-bottom:1px solid var(--border)">
+        <div class="body-title-lg">细分题材</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+          ${card.subthemes.map(t => `
+            <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 14px">
+              <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">${esc(t.name)}</div>
+              <div style="font-size:12px;color:var(--text-2);line-height:1.6;margin-bottom:6px">${esc(t.logic)}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                ${(t.stocks||[]).map(s => `<span style="font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-bg);padding:2px 8px;border-radius:var(--radius-sm)">${esc(s)}</span>`).join('')}
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
       <div class="body-section">
-        <div class="body-title">看多核心逻辑</div>
+        <div class="body-title-lg">看多核心逻辑</div>
         ${(card.logic||[]).map((l,i)=>`<div class="logic-item"><span class="logic-num">${i+1}</span><span>${highlight(l,q)}</span></div>`).join('')}
         ${card.risk?`<div class="logic-risk">⚠ ${highlight(card.risk,q)}</div>`:''}
       </div>
       <div class="body-section">
-        <div class="body-title">关注指标</div>
+        <div class="body-title-lg">关注指标</div>
         ${(card.indicators||[]).map(ind=>`<div class="indicator-row"><span class="ind-label">${esc(ind.label)}</span><span style="color:var(--text-2)">${highlight(ind.text,q)}</span></div>`).join('')}
         <div style="margin-top:14px"></div>
-        <div class="body-title">催化剂 / 时间节点</div>
+        <div class="body-title-lg">催化剂 / 时间节点</div>
         ${(card.catalysts||[]).map(c=>`<div class="catalyst-item">${highlight(c,q)}</div>`).join('')}
       </div>
       <div class="body-section">
-        <div class="body-title">代表股票 <span style="font-size:10px;color:var(--text-3);font-weight:400">· 点击进入个股分析</span></div>
+        <div class="body-title-lg">代表股票 <span style="font-size:11px;color:var(--text-3);font-weight:400;text-decoration:none;border:none">· 点击进入个股分析</span></div>
         <div class="stocks-grid">${stocksHtml}</div>
         ${emLink}
         ${editBtns}
@@ -760,13 +792,14 @@ function editCard(cardId, catId) {
   document.getElementById('f-indicators').value = (card.indicators||[]).map(i=>i.label+': '+i.text).join('\n');
   document.getElementById('f-catalysts').value = (card.catalysts||[]).join('\n');
   document.getElementById('f-stocks').value = (card.stocks||[]).map(s=>s.code+' '+s.name+' | '+s.desc).join('\n');
+  document.getElementById('f-subthemes').value = (card.subthemes||[]).map(t=>t.name+' / '+t.logic+' / '+(t.stocks||[]).join(',')).join('\n===\n');
   document.getElementById('editOverlay').classList.add('open');
 }
 
 function closeEdit() { document.getElementById('editOverlay').classList.remove('open'); }
 
 function clearForm() {
-  ['f-category','f-subcategory','f-keyword','f-definition','f-logic','f-risk','f-indicators','f-catalysts','f-stocks'].forEach(id=>{ document.getElementById(id).value=''; });
+  ['f-category','f-subcategory','f-keyword','f-definition','f-logic','f-risk','f-indicators','f-catalysts','f-stocks','f-subthemes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('f-phase').value = 'concept';
 }
 
@@ -778,6 +811,17 @@ function saveCard() {
   const indRaw = document.getElementById('f-indicators').value.trim();
   const catRaw = document.getElementById('f-catalysts').value.trim();
   const stockRaw = document.getElementById('f-stocks').value.trim();
+  const subRaw = document.getElementById('f-subthemes')?.value.trim() || '';
+  const subthemes = subRaw ? subRaw.split('===').map(s => {
+    const parts = s.trim().split('/');
+    if (parts.length < 2) return null;
+    return {
+      name: parts[0].trim(),
+      logic: parts[1].trim(),
+      stocks: (parts[2]||'').trim().split(',').map(x=>x.trim()).filter(Boolean)
+    };
+  }).filter(Boolean) : [];
+
   const card = {
     id: editingId || ('card_'+Date.now()),
     category, subcategory: document.getElementById('f-subcategory').value.trim(),
@@ -787,7 +831,8 @@ function saveCard() {
     risk: document.getElementById('f-risk').value.trim(),
     indicators: indRaw ? indRaw.split('\n').filter(l=>l.trim()).map(l=>{ const [lbl,...rest]=l.split(':'); return {label:lbl.trim(),text:rest.join(':').trim()}; }) : [],
     catalysts: catRaw ? catRaw.split('\n').filter(l=>l.trim()) : [],
-    stocks: stockRaw ? stockRaw.split('\n').filter(l=>l.trim()).map(l=>{ const [codes,desc]=l.split('|'); const parts=(codes||'').trim().split(/\s+/); return {code:parts[0]||'',name:parts.slice(1).join(' '),desc:(desc||'').trim()}; }) : []
+    stocks: stockRaw ? stockRaw.split('\n').filter(l=>l.trim()).map(l=>{ const [codes,desc]=l.split('|'); const parts=(codes||'').trim().split(/\s+/); return {code:parts[0]||'',name:parts.slice(1).join(' '),desc:(desc||'').trim()}; }) : [],
+    subthemes
   };
   if (editingId) {
     data.categories.forEach(cat=>{ const idx=cat.cards.findIndex(c=>c.id===editingId); if(idx>=0) cat.cards[idx]=card; });
