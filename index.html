@@ -96,7 +96,7 @@
   .card.open .chevron { transform: rotate(180deg); }
 
   /* Card body */
-  .card-body { display: none; grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid var(--border); }
+  .card-body { display: none; grid-template-columns: 1fr 1fr 1fr 1fr; border-top: 1px solid var(--border); }
   .card.open .card-body { display: grid; }
   .def-row { grid-column: 1/-1; padding: 10px 18px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-2); line-height: 1.65; background: var(--surface2); display: block; }
   .body-section { padding: 16px 18px; border-right: 1px solid var(--border); }
@@ -230,7 +230,7 @@
   <div class="header-row1">
     <div class="header-left">
       <h1>题材 Mapping</h1>
-      <p>A股科技赛道研究框架 · 持续更新 <span style="font-size:10px;color:var(--text-3);margin-left:6px">v6.23</span></p>
+      <p>A股科技赛道研究框架 · 持续更新 <span style="font-size:10px;color:var(--text-3);margin-left:6px">v6.24</span></p>
     </div>
     <div class="header-actions">
       <div class="sync-status" id="syncStatus"><span class="sync-dot" id="syncDot"></span><span id="syncText">未连接</span></div>
@@ -699,6 +699,17 @@ function renderCard(card, catId, q) {
         <div class="body-title-lg">看多核心逻辑</div>
         ${(card.logic||[]).map((l,i)=>`<div class="logic-item"><span class="logic-num">${i+1}</span><span>${highlight(l,q)}</span></div>`).join('')}
         ${card.risk?`<div class="logic-risk">⚠ ${highlight(card.risk,q)}</div>`:''}
+      </div>
+      <div class="body-section">
+        <div class="body-title-lg">细分题材</div>
+        ${(card.subthemes && card.subthemes.length > 0) ? (card.subthemes.map(t => `
+          <div style="margin-bottom:12px">
+            <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px">${esc(t.name)}</div>
+            <div style="font-size:12px;color:var(--text-2);line-height:1.55;margin-bottom:5px">${esc(t.logic)}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px">
+              ${(t.stocks||[]).map(s => `<span style="font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-bg);padding:1px 7px;border-radius:3px">${esc(s)}</span>`).join('')}
+            </div>
+          </div>`).join('')) : `<div style="font-size:12px;color:var(--text-3);font-style:italic">暂未填写，点击编辑添加</div>`}
       </div>
       <div class="body-section">
         <div class="body-title-lg">关注指标</div>
