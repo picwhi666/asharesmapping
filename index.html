@@ -203,8 +203,8 @@
 <!-- ── Main Page ── -->
 <div id="mainPage">
 <!-- TradingView Ticker Tape -->
-<div class="ticker-bar">
-  <div class="tradingview-widget-container" style="height:46px;overflow:hidden">
+<div class="ticker-bar" style="display:flex;align-items:center">
+  <div class="tradingview-widget-container" style="flex:1;height:46px;overflow:hidden;min-width:0">
     <div class="tradingview-widget-container__widget"></div>
     <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
     {
@@ -213,9 +213,7 @@
         {"proName": "SZSE:399006",      "title": "创业板"},
         {"proName": "SSE:000688",       "title": "科创50"},
         {"proName": "FOREXCOM:NSXUSD", "title": "纳斯达克"},
-        {"proName": "FOREXCOM:SPXUSD", "title": "标普500"},
-        {"proName": "TVC:NI225",        "title": "日经225"},
-        {"proName": "TVC:KOSPI",        "title": "韩国综合"}
+        {"proName": "FOREXCOM:SPXUSD", "title": "标普500"}
       ],
       "showSymbolLogo": false,
       "isTransparent": true,
@@ -225,12 +223,40 @@
     }
     </script>
   </div>
+  <div style="display:flex;gap:0;flex-shrink:0;height:46px;border-left:1px solid var(--border)">
+    <div class="tradingview-widget-container" style="width:140px;height:46px;overflow:hidden">
+      <div class="tradingview-widget-container__widget"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+      {
+        "symbols": [{"proName": "TVC:NI225", "title": "日经225"}],
+        "showSymbolLogo": false,
+        "isTransparent": true,
+        "displayMode": "adaptive",
+        "colorTheme": "light",
+        "locale": "zh_CN"
+      }
+      </script>
+    </div>
+    <div class="tradingview-widget-container" style="width:140px;height:46px;overflow:hidden;border-left:1px solid var(--border)">
+      <div class="tradingview-widget-container__widget"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+      {
+        "symbols": [{"proName": "TVC:KOSPI", "title": "韩国综合"}],
+        "showSymbolLogo": false,
+        "isTransparent": true,
+        "displayMode": "adaptive",
+        "colorTheme": "light",
+        "locale": "zh_CN"
+      }
+      </script>
+    </div>
+  </div>
 </div>
 <header>
   <div class="header-row1">
     <div class="header-left">
       <h1>题材 Mapping</h1>
-      <p>A股科技赛道研究框架 · 持续更新 <span style="font-size:10px;color:var(--text-3);margin-left:6px">v6.24</span></p>
+      <p>A股科技赛道研究框架 · 持续更新 <span style="font-size:10px;color:var(--text-3);margin-left:6px">v6.25</span></p>
     </div>
     <div class="header-actions">
       <div class="sync-status" id="syncStatus"><span class="sync-dot" id="syncDot"></span><span id="syncText">未连接</span></div>
@@ -320,7 +346,7 @@
     <div class="form-row"><label>关注指标（格式：标签: 内容，每行一个）</label><textarea id="f-indicators" placeholder="需求: 英伟达平台Capex指引&#10;价格: 现货涨价幅度"></textarea></div>
     <div class="form-row"><label>催化剂 / 时间节点（每行一个）</label><textarea id="f-catalysts" placeholder="📅 英伟达GTC大会（每年3月）&#10;📊 龙头季报业绩预告"></textarea></div>
     <div class="form-row"><label>代表股票（格式：代码 名称 | 描述，每行一个）</label><textarea id="f-stocks" placeholder="300308 中际旭创 | 全球光模块龙头，CPO核心供应商"></textarea></div>
-    <div class="form-row"><label>细分题材（每个题材用 === 分隔，格式：题材名称 / 逻辑 / 股票代码1,股票代码2）</label><textarea id="f-subthemes" placeholder="光模块 / AI算力需求驱动，1.6T加速放量 / 300308,300502&#10;===&#10;光器件 / CPO产业链核心器件供应商 / 300394,688195"></textarea></div>
+    <div class="form-row"><label>细分题材（每个题材用 === 分隔，格式：题材名称 / 逻辑 / 股票代码1,股票代码2）</label><textarea id="f-subthemes" placeholder="光模块 / AI算力需求驱动，1.6T加速放量 / 中际旭创,新易盛&#10;===&#10;光器件 / CPO产业链核心器件供应商 / 天孚通信,腾景科技"></textarea></div>
     <div class="edit-actions">
       <button class="btn" onclick="closeEdit()">取消</button>
       <button class="btn btn-primary" onclick="saveCard()">保存</button>
@@ -810,7 +836,17 @@ function editCard(cardId, catId) {
   document.getElementById('editOverlay').classList.add('open');
 }
 
-function closeEdit() { document.getElementById('editOverlay').classList.remove('open'); }
+function closeEdit(force) {
+  if (!force) {
+    // Check if any field has content
+    const fields = ['f-category','f-subcategory','f-keyword','f-definition','f-logic','f-risk','f-indicators','f-catalysts','f-stocks','f-subthemes'];
+    const hasContent = fields.some(id => { const el = document.getElementById(id); return el && el.value.trim(); });
+    if (hasContent) {
+      if (!confirm('确认退出编辑？\n\n已填写的内容将会丢失。')) return;
+    }
+  }
+  document.getElementById('editOverlay').classList.remove('open');
+}
 
 function clearForm() {
   ['f-category','f-subcategory','f-keyword','f-definition','f-logic','f-risk','f-indicators','f-catalysts','f-stocks','f-subthemes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
@@ -873,7 +909,7 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-document.getElementById('editOverlay').addEventListener('click', function(e){ if(e.target===this) closeEdit(); });
+// Click outside does NOT close edit panel - user must click cancel/save explicitly
 
 // ── Sector change badges ──
 // Expanded constituents (15-20 stocks per sector, by market cap)
