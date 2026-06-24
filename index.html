@@ -372,15 +372,20 @@ const STOCK_KEY    = 'tjmap_stocks_v1';
 const WORKER_URL   = 'https://sina-proxy.picwhi.workers.dev';
 
 // ── Index Bar Config ──
-// 新浪行情代码: 国内指数用 s_sh/s_sz 前缀，海外用 gb_ 前缀
+const INDEX_LIST_CN = [
+  { id: 'sh50', name: '上证50', code: 's_sh000016' },
+  { id: 'cyb',  name: '创业板', code: 's_sz399006' },
+  { id: 'kc50', name: '科创50', code: 's_sh000688' },
+];
+const INDEX_LIST_OVERSEAS = [
+  { id: 'ndx',    name: '纳斯达克', symbol: '^IXIC' },
+  { id: 'spx',    name: '标普500',  symbol: '^GSPC' },
+  { id: 'nikkei', name: '日经225',  symbol: '^N225' },
+  { id: 'kospi',  name: 'KOSPI',    symbol: '^KS11' },
+];
 const INDEX_LIST = [
-  { id: 'sh50',   name: '上证50',   code: 's_sh000016', fmt: 'cn' },
-  { id: 'cyb',    name: '创业板',   code: 's_sz399006', fmt: 'cn' },
-  { id: 'kc50',   name: '科创50',   code: 's_sh000688', fmt: 'cn' },
-  { id: 'ndx',    name: '纳斯达克', code: 'gb_$IXIC',   fmt: 'us' },
-  { id: 'spx',    name: '标普500',  code: 'gb_$INX',    fmt: 'us' },
-  { id: 'nikkei', name: '日经225',  code: 'gb_$N225',   fmt: 'jp' },
-  { id: 'kospi',  name: 'KOSPI',    code: 'gb_$KS11',   fmt: 'kr' },
+  ...INDEX_LIST_CN.map(i => ({ ...i, fmt: 'cn' })),
+  ...INDEX_LIST_OVERSEAS.map(i => ({ ...i, fmt: 'os' })),
 ];
 
 // ── Default data ──
@@ -542,7 +547,7 @@ async function fetchIndexBar() {
 async function fetchCnIndices() {
   const codes = INDEX_LIST_CN.map(i => i.code).join(',');
   try {
-    const r = await fetch(`${WORKER_URL}?codes=${encodeURIComponent(codes)}`, {
+    const r = await fetch(WORKER_URL + '?codes=' + encodeURIComponent(codes), {
       signal: AbortSignal.timeout(8000)
     });
     if (!r.ok) return;
@@ -552,6 +557,7 @@ async function fetchCnIndices() {
       const m = text.match(re);
       if (!m) return;
       const parts = m[1].split(',');
+      // format: name, now, change, changepct, vol, amount
       const price = parseFloat(parts[1]);
       const changePct = parseFloat(parts[3]);
       renderIdxItem(idx.id, price, changePct, 2);
@@ -561,12 +567,12 @@ async function fetchCnIndices() {
 
 async function fetchOverseasIndex(idx) {
   try {
-    const r = await fetch(`${WORKER_URL}?yahoo=${encodeURIComponent(idx.symbol)}`, {
+    const r = await fetch(WORKER_URL + '?yahoo=' + encodeURIComponent(idx.symbol), {
       signal: AbortSignal.timeout(10000)
     });
     if (!r.ok) return;
     const j = await r.json();
-    const meta = j?.chart?.result?.[0]?.meta;
+    const meta = j && j.chart && j.chart.result && j.chart.result[0] && j.chart.result[0].meta;
     if (!meta) return;
     const price = meta.regularMarketPrice || meta.previousClose;
     const prev = meta.chartPreviousClose || meta.previousClose;
