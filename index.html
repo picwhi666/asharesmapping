@@ -34,6 +34,53 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-size: 14px; line-height: 1.6; }
 
+  /* ── Index Bar ── */
+  .index-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    height: 46px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .index-bar::-webkit-scrollbar { display: none; }
+  .idx-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 14px;
+    flex-shrink: 0;
+  }
+  .idx-item:first-child { padding-left: 0; }
+  .idx-name {
+    font-size: 12px;
+    color: var(--text-3);
+    white-space: nowrap;
+  }
+  .idx-val {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.01em;
+  }
+  .idx-chg {
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .idx-up   { color: var(--green); background: var(--green-bg); }
+  .idx-down { color: var(--red);   background: var(--red-bg);   }
+  .idx-flat { color: var(--text-3); background: var(--surface2); }
+  .idx-loading { color: var(--text-3); background: var(--surface2); animation: idxpulse 1s infinite; }
+  @keyframes idxpulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+  .idx-sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
+
   /* Header */
   header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; position: sticky; top: 0; z-index: 100; }
   .header-row1 { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
@@ -175,10 +222,6 @@
   /* Highlight search */
   .highlight { background: #fef08a; color: #1a1917; border-radius: 2px; padding: 0 2px; }
 
-  /* Market ticker bar */
-  .ticker-bar { background: var(--surface); border-bottom: 1px solid var(--border); overflow: hidden; height: 46px; }
-  .ticker-bar iframe { border: none; width: 100%; height: 100%; display: block; }
-
   /* Sector badges on cards */
   .sector-change { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; margin-left: 8px; }
   .sector-up { background: var(--green-bg); color: var(--green); }
@@ -195,6 +238,9 @@
     header { padding: 12px 16px; }
     main { padding: 16px; }
     .form-2col { grid-template-columns: 1fr; }
+    .idx-item { padding: 0 10px; }
+    .idx-name { font-size: 11px; }
+    .idx-val { font-size: 12px; }
   }
 </style>
 </head>
@@ -202,18 +248,12 @@
 
 <!-- ── Main Page ── -->
 <div id="mainPage">
-<!-- TradingView Ticker Tape -->
-<div class="ticker-bar">
-  <script type="module" src="https://widgets.tradingview-widget.com/w/en/tv-ticker-tape.js"></script>
-  <tv-ticker-tape
-    symbols="SSE:000001,SZSE:399006,SSE:000688,FOREXCOM:NSXUSD,FOREXCOM:SPXUSD,FXPRO:JAPAN225,TVC:KOSPI"
-    style="width:100%;height:46px;display:block"
-    color-theme="light"
-    locale="zh_CN"
-    is-transparent="true"
-    show-symbol-logo="false">
-  </tv-ticker-tape>
+
+<!-- ── Index Bar ── -->
+<div class="index-bar" id="indexBar">
+  <!-- rendered by JS -->
 </div>
+
 <header>
   <div class="header-row1">
     <div class="header-left">
@@ -329,6 +369,19 @@ const STOCKS_RAW   = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_
 const STOCKS_API   = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${STOCKS_FILE}`;
 const TOKEN_KEY    = 'tjmap_token';
 const STOCK_KEY    = 'tjmap_stocks_v1';
+const WORKER_URL   = 'https://sina-proxy.picwhi.workers.dev';
+
+// ── Index Bar Config ──
+// 新浪行情代码: 国内指数用 s_sh/s_sz 前缀，海外用 gb_ 前缀
+const INDEX_LIST = [
+  { id: 'sh50',   name: '上证50',   code: 's_sh000016', fmt: 'cn' },
+  { id: 'cyb',    name: '创业板',   code: 's_sz399006', fmt: 'cn' },
+  { id: 'kc50',   name: '科创50',   code: 's_sh000688', fmt: 'cn' },
+  { id: 'ndx',    name: '纳斯达克', code: 'gb_$IXIC',   fmt: 'us' },
+  { id: 'spx',    name: '标普500',  code: 'gb_$INX',    fmt: 'us' },
+  { id: 'nikkei', name: '日经225',  code: 'gb_$N225',   fmt: 'jp' },
+  { id: 'kospi',  name: 'KOSPI',    code: 'gb_$KS11',   fmt: 'kr' },
+];
 
 // ── Default data ──
 const DEFAULT_DATA = {
@@ -396,10 +449,8 @@ async function loadStocksFromGitHub() {
     const res = await fetch(STOCKS_RAW + '?t=' + Date.now());
     if (res.ok) {
       const remote = await res.json();
-      // merge: remote wins for keys that exist, local fills the rest
       stockAnalyses = Object.assign({}, stockAnalyses, remote);
       saveStockDataLocal();
-      // get SHA for future updates
       const token = getToken();
       if (token) {
         const meta = await fetch(STOCKS_API, { headers: { Authorization: 'token ' + token } });
@@ -424,12 +475,15 @@ async function saveStocksToGitHub() {
 
 // ── Init ──
 async function init() {
-  stockAnalyses = loadStockData(); // load local first (fast)
+  stockAnalyses = loadStockData();
   isOwner = !!getToken();
   renderSetupArea();
+  renderIndexBarSkeleton();
   await loadFromGitHub();
-  await loadStocksFromGitHub(); // then merge with remote
-  render(); // re-render to update note indicators
+  await loadStocksFromGitHub();
+  render();
+  setTimeout(fetchIndexBar, 800);
+  setInterval(fetchIndexBar, 60000);
 }
 
 function renderSetupArea() {
@@ -467,6 +521,87 @@ function dismissSetup() {
   document.getElementById('readonly-notice').style.display = 'block';
 }
 
+// ── Index Bar ──
+function renderIndexBarSkeleton() {
+  const bar = document.getElementById('indexBar');
+  bar.innerHTML = INDEX_LIST.map((idx, i) =>
+    (i > 0 ? '<div class="idx-sep"></div>' : '') +
+    `<div class="idx-item">
+      <span class="idx-name">${idx.name}</span>
+      <span class="idx-val idx-loading" id="idx-val-${idx.id}">—</span>
+      <span class="idx-chg idx-loading" id="idx-chg-${idx.id}">—</span>
+    </div>`
+  ).join('');
+}
+
+async function fetchIndexBar() {
+  const codes = INDEX_LIST.map(i => i.code).join(',');
+  try {
+    const r = await fetch(`${WORKER_URL}?codes=${encodeURIComponent(codes)}`, {
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!r.ok) return;
+    const text = await r.text();
+    parseAndRenderIndexBar(text);
+  } catch(e) { /* silent fail, keep skeleton */ }
+}
+
+function parseAndRenderIndexBar(text) {
+  INDEX_LIST.forEach(idx => {
+    // 国内指数: hq_str_s_sh000016="上证50,2752.3417,20.4521,0.75%,..."; 字段: name,now,change,changepct
+    // 海外指数: hq_str_gb_$IXIC="纳斯达克综合指数,19864.98,...,+52.63,+0.27%,..."; 字段不同
+    let valEl = document.getElementById('idx-val-' + idx.id);
+    let chgEl = document.getElementById('idx-chg-' + idx.id);
+    if (!valEl || !chgEl) return;
+
+    // Build regex for this code (escape special chars like $)
+    const escapedCode = idx.code.replace(/\$/g, '\\$');
+    const re = new RegExp('hq_str_' + escapedCode + '="([^"]*)"');
+    const m = text.match(re);
+    if (!m) return;
+
+    const parts = m[1].split(',');
+    if (parts.length < 3) return;
+
+    let price, changePct;
+
+    if (idx.fmt === 'cn') {
+      // s_sh/s_sz: name, now, change, changepct(无%符), vol, amount
+      price = parseFloat(parts[1]);
+      changePct = parseFloat(parts[3]);
+    } else {
+      // gb_: name, english_name, now, ..., change, changepct
+      // 格式: 名称,英文名,现价,最高,最低,昨收,开盘,成交量,时间,涨跌额,涨跌幅%
+      price = parseFloat(parts[2]);
+      // 找带%的字段
+      let pctStr = '';
+      for (let p of parts) {
+        const cleaned = p.trim().replace('%','');
+        if (p.includes('%') && !isNaN(parseFloat(cleaned))) { pctStr = cleaned; break; }
+      }
+      changePct = parseFloat(pctStr);
+    }
+
+    if (isNaN(price) || price === 0) return;
+
+    // Format price
+    let priceStr;
+    if (price >= 10000) priceStr = price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    else if (price >= 1000) priceStr = price.toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    else priceStr = price.toFixed(2);
+
+    // Format change
+    const sign = changePct >= 0 ? '+' : '';
+    const chgStr = isNaN(changePct) ? '—' : sign + changePct.toFixed(2) + '%';
+    const cls = isNaN(changePct) ? 'idx-flat' : changePct > 0.05 ? 'idx-up' : changePct < -0.05 ? 'idx-down' : 'idx-flat';
+
+    valEl.textContent = priceStr;
+    valEl.className = 'idx-val';
+    chgEl.textContent = chgStr;
+    chgEl.className = 'idx-chg ' + cls;
+  });
+}
+
 // ── GitHub I/O ──
 async function loadFromGitHub() {
   syncStatus('loading', '加载数据...');
@@ -474,7 +609,6 @@ async function loadFromGitHub() {
     const res = await fetch(RAW_URL + '?t=' + Date.now());
     if (res.ok) {
       data = await res.json();
-      console.log('[mapping] loaded from GitHub, categories:', data.categories?.length);
       const token = getToken();
       if (token) {
         const meta = await fetch(API_URL, { headers: { Authorization: 'token ' + token } });
@@ -638,7 +772,6 @@ function renderCard(card, catId, q) {
       <button class="btn" style="font-size:11px;padding:4px 10px;color:var(--red)" onclick="deleteCard('${card.id}','${catId}')">✕ 删除</button>
     </div>` : '';
 
-  // Stocks with click to detail
   const stocksHtml = (card.stocks||[]).map(s => {
     const hasNotes = stockAnalyses[s.code] && Object.values(stockAnalyses[s.code]).some(v=>v&&v.trim());
     return `<div class="stock-row" onclick="openStockPage('${esc(s.code)}','${esc(s.name)}','${esc(card.keyword)}')">
@@ -649,7 +782,6 @@ function renderCard(card, catId, q) {
     </div>`;
   }).join('');
 
-  // East money link
   const emLink = `<a class="ext-link-chip" href="https://quote.eastmoney.com/center/gridlist.html#hs_s__${encodeURIComponent(card.keyword)}" target="_blank">📈 东方财富板块行情 ↗</a>`;
 
   wrap.innerHTML = `
@@ -725,14 +857,12 @@ function openStockPage(code, name, sector) {
   currentStockKey = code;
   document.getElementById('stockPageTitle').textContent = `${name}（${code}）`;
   document.getElementById('stockPageSubtitle').textContent = `赛道：${sector} · 点击各板块填写分析笔记`;
-
   const fields = ['industry','products','earnings','bull','global','risk'];
   const saved = stockAnalyses[code] || {};
   fields.forEach(f => {
     document.getElementById('ta-'+f).value = saved[f] || '';
     document.getElementById('si-'+f).textContent = '';
   });
-
   document.getElementById('stockPage').classList.add('active');
   document.getElementById('mainPage').style.overflow = 'hidden';
 }
@@ -741,7 +871,7 @@ function closeStockPage() {
   document.getElementById('stockPage').classList.remove('active');
   document.getElementById('mainPage').style.overflow = '';
   currentStockKey = null;
-  render(); // refresh to update note indicators
+  render();
 }
 
 async function saveStockAnalysis() {
@@ -800,7 +930,6 @@ function editCard(cardId, catId) {
 
 function closeEdit(force) {
   if (!force) {
-    // Check if any field has content
     const fields = ['f-category','f-subcategory','f-keyword','f-definition','f-logic','f-risk','f-indicators','f-catalysts','f-stocks','f-subthemes'];
     const hasContent = fields.some(id => { const el = document.getElementById(id); return el && el.value.trim(); });
     if (hasContent) {
@@ -871,10 +1000,7 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-// Click outside does NOT close edit panel - user must click cancel/save explicitly
-
 // ── Sector change badges ──
-// Expanded constituents (15-20 stocks per sector, by market cap)
 const SECTOR_STOCKS = {
   'cpo': [
     '300308','300502','300394','601869','002281',
@@ -900,11 +1026,7 @@ const SECTOR_STOCKS = {
 };
 
 let sectorChanges = {};
-let _sinaLoaded = {};   // code -> {now, prev, change}
-let _sinaScripts = [];  // keep refs to avoid GC
-
-// ── Fetch sector data via Cloudflare Worker ──
-const WORKER_URL = 'https://sina-proxy.picwhi.workers.dev';
+let _sinaLoaded = {};
 
 async function fetchSinaText(sinaUrl) {
   const codes = sinaUrl.split('list=')[1] || '';
@@ -913,31 +1035,22 @@ async function fetchSinaText(sinaUrl) {
       signal: AbortSignal.timeout(8000)
     });
     if (!r.ok) return '';
-    // Sina returns GBK - read as arraybuffer and decode properly
-    const buf = await r.arrayBuffer();
-    try {
-      const text = new TextDecoder('gbk').decode(buf);
-      return text;
-    } catch(e) {
-      return new TextDecoder('utf-8').decode(buf);
-    }
+    return await r.text();
   } catch(e) {
     return '';
   }
 }
 
 function parseSinaText(text) {
-  // Sina format: name,open,prev_close,now,high,low,...,date,time,..
   const re = /hq_str_s[hz](\d+)="([^"]*)"/g;
   let m;
   while ((m = re.exec(text)) !== null) {
     const code = m[1];
     const parts = m[2].split(',');
     if (parts.length < 4) continue;
-    const prev = parseFloat(parts[2]); // yesterday close
-    const now  = parseFloat(parts[3]); // current / today close
-    const open = parseFloat(parts[1]); // today open
-    // After hours: now may be 0, use open as fallback, or skip if all zero
+    const prev = parseFloat(parts[2]);
+    const now  = parseFloat(parts[3]);
+    const open = parseFloat(parts[1]);
     const price = now > 0 ? now : open > 0 ? open : 0;
     if (prev > 0 && price > 0) {
       _sinaLoaded[code] = { now: price, prev, change: (price - prev) / prev * 100 };
@@ -947,20 +1060,17 @@ function parseSinaText(text) {
 
 async function fetchSectorChanges() {
   const allCodes = [...new Set(Object.values(SECTOR_STOCKS).flat())];
-  // Batch into groups of 20
   const batches = [];
   for (let i = 0; i < allCodes.length; i += 20) batches.push(allCodes.slice(i, i + 20));
 
   await Promise.all(batches.map(async batch => {
     const sinaVars = batch.map(c => {
-      // Shanghai: 6xxxxx | Shenzhen: 0xxxxx, 3xxxxx, 2xxxxx
       return (c.startsWith('6') ? 'sh' : 'sz') + c;
     }).join(',');
     const text = await fetchSinaText('https://hq.sinajs.cn/list=' + sinaVars);
     if (text) parseSinaText(text);
   }));
 
-  // Compute averages
   Object.entries(SECTOR_STOCKS).forEach(([id, codes]) => {
     const vals = codes.map(c => _sinaLoaded[c]?.change).filter(v => v !== undefined && !isNaN(v));
     if (!vals.length) return;
@@ -983,23 +1093,18 @@ function updateSectorBadges() {
   });
 }
 
-// Hide all "加载中" badges after 15s if no data arrived
 setTimeout(() => {
   document.querySelectorAll('.sector-loading').forEach(el => {
     el.style.display = 'none';
   });
 }, 15000);
 
-// Auto-refresh: always show data (closing price outside trading hours)
 function startSectorRefresh() {
   fetchSectorChanges();
-  setInterval(() => {
-    fetchSectorChanges(); // refresh every 90s always
-  }, 90000);
+  setInterval(() => { fetchSectorChanges(); }, 90000);
 }
 
 init();
-// Delay sector fetch slightly to let page render first
 setTimeout(startSectorRefresh, 2000);
 </script>
 
