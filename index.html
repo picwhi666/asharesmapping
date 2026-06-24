@@ -535,71 +535,63 @@ function renderIndexBarSkeleton() {
 }
 
 async function fetchIndexBar() {
-  const codes = INDEX_LIST.map(i => i.code).join(',');
+  fetchCnIndices();
+  INDEX_LIST_OVERSEAS.forEach(idx => fetchOverseasIndex(idx));
+}
+
+async function fetchCnIndices() {
+  const codes = INDEX_LIST_CN.map(i => i.code).join(',');
   try {
     const r = await fetch(`${WORKER_URL}?codes=${encodeURIComponent(codes)}`, {
       signal: AbortSignal.timeout(8000)
     });
     if (!r.ok) return;
     const text = await r.text();
-    parseAndRenderIndexBar(text);
-  } catch(e) { /* silent fail, keep skeleton */ }
+    INDEX_LIST_CN.forEach(idx => {
+      const re = new RegExp('hq_str_' + idx.code + '="([^"]*)"');
+      const m = text.match(re);
+      if (!m) return;
+      const parts = m[1].split(',');
+      const price = parseFloat(parts[1]);
+      const changePct = parseFloat(parts[3]);
+      renderIdxItem(idx.id, price, changePct, 2);
+    });
+  } catch(e) {}
 }
 
-function parseAndRenderIndexBar(text) {
-  INDEX_LIST.forEach(idx => {
-    // 国内指数: hq_str_s_sh000016="上证50,2752.3417,20.4521,0.75%,..."; 字段: name,now,change,changepct
-    // 海外指数: hq_str_gb_$IXIC="纳斯达克综合指数,19864.98,...,+52.63,+0.27%,..."; 字段不同
-    let valEl = document.getElementById('idx-val-' + idx.id);
-    let chgEl = document.getElementById('idx-chg-' + idx.id);
-    if (!valEl || !chgEl) return;
+async function fetchOverseasIndex(idx) {
+  try {
+    const r = await fetch(`${WORKER_URL}?yahoo=${encodeURIComponent(idx.symbol)}`, {
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!r.ok) return;
+    const j = await r.json();
+    const meta = j?.chart?.result?.[0]?.meta;
+    if (!meta) return;
+    const price = meta.regularMarketPrice || meta.previousClose;
+    const prev = meta.chartPreviousClose || meta.previousClose;
+    const changePct = prev ? (price - prev) / prev * 100 : NaN;
+    const decimals = (idx.symbol === '^N225' || idx.symbol === '^KS11') ? 0 : 1;
+    renderIdxItem(idx.id, price, changePct, decimals);
+  } catch(e) {}
+}
 
-    // Build regex for this code (escape special chars like $)
-    const escapedCode = idx.code.replace(/\$/g, '\\$');
-    const re = new RegExp('hq_str_' + escapedCode + '="([^"]*)"');
-    const m = text.match(re);
-    if (!m) return;
-
-    const parts = m[1].split(',');
-    if (parts.length < 3) return;
-
-    let price, changePct;
-
-    if (idx.fmt === 'cn') {
-      // s_sh/s_sz: name, now, change, changepct(无%符), vol, amount
-      price = parseFloat(parts[1]);
-      changePct = parseFloat(parts[3]);
-    } else {
-      // gb_: name, english_name, now, ..., change, changepct
-      // 格式: 名称,英文名,现价,最高,最低,昨收,开盘,成交量,时间,涨跌额,涨跌幅%
-      price = parseFloat(parts[2]);
-      // 找带%的字段
-      let pctStr = '';
-      for (let p of parts) {
-        const cleaned = p.trim().replace('%','');
-        if (p.includes('%') && !isNaN(parseFloat(cleaned))) { pctStr = cleaned; break; }
-      }
-      changePct = parseFloat(pctStr);
-    }
-
-    if (isNaN(price) || price === 0) return;
-
-    // Format price
-    let priceStr;
-    if (price >= 10000) priceStr = price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    else if (price >= 1000) priceStr = price.toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    else priceStr = price.toFixed(2);
-
-    // Format change
-    const sign = changePct >= 0 ? '+' : '';
-    const chgStr = isNaN(changePct) ? '—' : sign + changePct.toFixed(2) + '%';
-    const cls = isNaN(changePct) ? 'idx-flat' : changePct > 0.05 ? 'idx-up' : changePct < -0.05 ? 'idx-down' : 'idx-flat';
-
-    valEl.textContent = priceStr;
-    valEl.className = 'idx-val';
-    chgEl.textContent = chgStr;
-    chgEl.className = 'idx-chg ' + cls;
-  });
+function renderIdxItem(id, price, changePct, decimals) {
+  const valEl = document.getElementById('idx-val-' + id);
+  const chgEl = document.getElementById('idx-chg-' + id);
+  if (!valEl || !chgEl) return;
+  if (isNaN(price) || price === 0) return;
+  let priceStr;
+  if (price >= 10000) priceStr = price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  else if (price >= 1000) priceStr = price.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  else priceStr = price.toFixed(2);
+  const sign = changePct >= 0 ? '+' : '';
+  const chgStr = isNaN(changePct) ? '—' : sign + changePct.toFixed(2) + '%';
+  const cls = isNaN(changePct) ? 'idx-flat' : changePct > 0.05 ? 'idx-up' : changePct < -0.05 ? 'idx-down' : 'idx-flat';
+  valEl.textContent = priceStr;
+  valEl.className = 'idx-val';
+  chgEl.textContent = chgStr;
+  chgEl.className = 'idx-chg ' + cls;
 }
 
 // ── GitHub I/O ──
