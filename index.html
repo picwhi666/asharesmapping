@@ -201,10 +201,19 @@
   .section-icon { font-size: 14px; }
   .section-title { font-size: 12px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; }
   .section-body { padding: 0; }
-  .analysis-textarea { width: 100%; min-height: 140px; background: transparent; border: none; padding: 14px 16px; color: var(--text); font-size: 13px; font-family: inherit; resize: vertical; line-height: 1.65; }
-  .analysis-textarea:focus { outline: none; background: var(--surface2); }
-  .analysis-textarea::placeholder { color: var(--text-3); }
+  .analysis-div { width: 100%; min-height: 140px; background: transparent; border: none; padding: 14px 16px; color: var(--text); font-size: 13px; font-family: inherit; line-height: 1.65; outline: none; word-break: break-word; overflow-wrap: break-word; }
+  .analysis-div:focus { background: var(--surface2); }
+  .analysis-div:empty::before { content: attr(data-placeholder); color: var(--text-3); pointer-events: none; display: block; }
   .save-indicator { font-size: 11px; color: var(--text-3); margin-left: auto; }
+
+  /* Rich text toolbar */
+  #richToolbar { display: none; position: fixed; z-index: 9999; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 6px; padding: 4px 6px; gap: 2px; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,.18); flex-wrap: nowrap; }
+  #richToolbar.visible { display: flex; }
+  .tb-btn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; border: 1px solid transparent; background: transparent; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--text); flex-shrink: 0; font-family: inherit; }
+  .tb-btn:hover { background: var(--surface2); border-color: var(--border); }
+  .tb-sep { width: 1px; height: 16px; background: var(--border); margin: 0 2px; flex-shrink: 0; }
+  .tb-dot { width: 18px; height: 18px; border-radius: 3px; border: 1.5px solid rgba(0,0,0,.18); cursor: pointer; flex-shrink: 0; display: inline-block; transition: transform .1s; }
+  .tb-dot:hover { border-color: var(--text); transform: scale(1.2); }
 
   /* Edit overlay */
   .edit-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 400; align-items: center; justify-content: center; }
@@ -297,30 +306,48 @@
     <div class="analysis-grid">
       <div class="analysis-section">
         <div class="section-header"><span class="section-icon">🏭</span><span class="section-title">行业分析</span><span class="save-indicator" id="si-industry"></span></div>
-        <div class="section-body"><textarea class="analysis-textarea" id="ta-industry" placeholder="行业格局、竞争壁垒、上下游关系、市场空间..."></textarea></div>
+        <div class="section-body"><div class="analysis-div" id="ta-industry" contenteditable="true" data-placeholder="行业格局、竞争壁垒、上下游关系、市场空间..."></div></div>
       </div>
       <div class="analysis-section">
         <div class="section-header"><span class="section-icon">📦</span><span class="section-title">主营产品</span><span class="save-indicator" id="si-products"></span></div>
-        <div class="section-body"><textarea class="analysis-textarea" id="ta-products" placeholder="核心产品线、收入结构、毛利率、产能情况..."></textarea></div>
+        <div class="section-body"><div class="analysis-div" id="ta-products" contenteditable="true" data-placeholder="核心产品线、收入结构、毛利率、产能情况..."></div></div>
       </div>
       <div class="analysis-section">
         <div class="section-header"><span class="section-icon">📊</span><span class="section-title">业绩预期</span><span class="save-indicator" id="si-earnings"></span></div>
-        <div class="section-body"><textarea class="analysis-textarea" id="ta-earnings" placeholder="近期季报数据、营收/净利增速、分析师预期、业绩驱动因素..."></textarea></div>
+        <div class="section-body"><div class="analysis-div" id="ta-earnings" contenteditable="true" data-placeholder="近期季报数据、营收/净利增速、分析师预期、业绩驱动因素..."></div></div>
       </div>
       <div class="analysis-section">
         <div class="section-header"><span class="section-icon">✅</span><span class="section-title">买入逻辑</span><span class="save-indicator" id="si-bull"></span></div>
-        <div class="section-body"><textarea class="analysis-textarea" id="ta-bull" placeholder="为什么买、核心催化剂、目标价位、持有周期..."></textarea></div>
+        <div class="section-body"><div class="analysis-div" id="ta-bull" contenteditable="true" data-placeholder="为什么买、核心催化剂、目标价位、持有周期..."></div></div>
       </div>
       <div class="analysis-section">
         <div class="section-header"><span class="section-icon">🌏</span><span class="section-title">海外观点</span><span class="save-indicator" id="si-global"></span></div>
-        <div class="section-body"><textarea class="analysis-textarea" id="ta-global" placeholder="外资机构评级、对标海外公司、海外产业链动态..."></textarea></div>
+        <div class="section-body"><div class="analysis-div" id="ta-global" contenteditable="true" data-placeholder="外资机构评级、对标海外公司、海外产业链动态..."></div></div>
       </div>
       <div class="analysis-section">
         <div class="section-header"><span class="section-icon">⚠️</span><span class="section-title">风险点</span><span class="save-indicator" id="si-risk"></span></div>
-        <div class="section-body"><textarea class="analysis-textarea" id="ta-risk" placeholder="主要风险、止损条件、需要跟踪的反转信号..."></textarea></div>
+        <div class="section-body"><div class="analysis-div" id="ta-risk" contenteditable="true" data-placeholder="主要风险、止损条件、需要跟踪的反转信号..."></div></div>
       </div>
     </div>
   </div>
+</div>
+
+<!-- Rich Text Toolbar -->
+<div id="richToolbar">
+  <button class="tb-btn" data-cmd="bold" title="加粗 (Ctrl+B)"><b>B</b></button>
+  <button class="tb-btn" data-cmd="italic" title="斜体 (Ctrl+I)"><i>I</i></button>
+  <button class="tb-btn" data-cmd="underline" title="下划线 (Ctrl+U)"><u>U</u></button>
+  <div class="tb-sep"></div>
+  <span class="tb-dot" data-cmd="hiliteColor" data-val="#fef08a" style="background:#fef08a" title="黄色高亮"></span>
+  <span class="tb-dot" data-cmd="hiliteColor" data-val="#bbf7d0" style="background:#bbf7d0" title="绿色高亮"></span>
+  <span class="tb-dot" data-cmd="hiliteColor" data-val="#fecaca" style="background:#fecaca" title="红色高亮"></span>
+  <span class="tb-dot" data-cmd="hiliteColor" data-val="#bfdbfe" style="background:#bfdbfe" title="蓝色高亮"></span>
+  <div class="tb-sep"></div>
+  <span class="tb-dot" data-cmd="foreColor" data-val="#ef4444" style="background:#ef4444" title="红色文字"></span>
+  <span class="tb-dot" data-cmd="foreColor" data-val="#3b82f6" style="background:#3b82f6" title="蓝色文字"></span>
+  <span class="tb-dot" data-cmd="foreColor" data-val="#16a34a" style="background:#16a34a" title="绿色文字"></span>
+  <span class="tb-dot" data-cmd="foreColor" data-val="#f59e0b" style="background:#f59e0b" title="橙色文字"></span>
+  <button class="tb-btn" data-cmd="removeFormat" title="清除格式" style="font-size:10px;width:auto;padding:0 5px">A↺</button>
 </div>
 
 <!-- Edit overlay -->
@@ -771,7 +798,7 @@ function renderCard(card, catId, q) {
     </div>` : '';
 
   const stocksHtml = (card.stocks||[]).map(s => {
-    const hasNotes = stockAnalyses[s.code] && Object.values(stockAnalyses[s.code]).some(v=>v&&v.trim());
+    const hasNotes = stockAnalyses[s.code] && Object.values(stockAnalyses[s.code]).some(v=>v&&v.replace(/<[^>]*>/g,'').trim());
     return `<div class="stock-row" onclick="openStockPage('${esc(s.code)}','${esc(s.name)}','${esc(card.keyword)}')">
       <span class="stock-code">${highlight(s.code,q)}</span>
       <span class="stock-name">${highlight(s.name,q)}</span>
@@ -842,7 +869,7 @@ function openStockPage(code, name, sector) {
   const fields = ['industry','products','earnings','bull','global','risk'];
   const saved = stockAnalyses[code] || {};
   fields.forEach(f => {
-    document.getElementById('ta-'+f).value = saved[f] || '';
+    document.getElementById('ta-'+f).innerHTML = saved[f] || '';
     document.getElementById('si-'+f).textContent = '';
   });
   document.getElementById('stockPage').classList.add('active');
@@ -860,11 +887,12 @@ async function saveStockAnalysis() {
   if (!currentStockKey) return;
   const fields = ['industry','products','earnings','bull','global','risk'];
   const obj = {};
-  fields.forEach(f => { obj[f] = document.getElementById('ta-'+f).value; });
+  fields.forEach(f => { obj[f] = document.getElementById('ta-'+f).innerHTML; });
   stockAnalyses[currentStockKey] = obj;
   saveStockDataLocal();
   fields.forEach(f => {
-    document.getElementById('si-'+f).textContent = obj[f].trim() ? '已保存 ✓' : '';
+    const plain = obj[f].replace(/<[^>]*>/g, '').trim();
+    document.getElementById('si-'+f).textContent = plain ? '已保存 ✓' : '';
   });
   const token = getToken();
   if (token) {
@@ -1088,6 +1116,60 @@ function startSectorRefresh() {
 
 init();
 setTimeout(startSectorRefresh, 2000);
+
+// ── Rich Text Toolbar ──
+(function() {
+  const toolbar = document.getElementById('richToolbar');
+
+  // Prevent toolbar clicks from collapsing the selection
+  toolbar.addEventListener('mousedown', function(e) { e.preventDefault(); });
+
+  // Execute command on button/dot click
+  toolbar.addEventListener('mousedown', function(e) {
+    const target = e.target.closest('[data-cmd]');
+    if (!target) return;
+    const cmd = target.dataset.cmd;
+    const val = target.dataset.val || null;
+    document.execCommand(cmd, false, val);
+  });
+
+  // Show or hide toolbar based on selection
+  document.addEventListener('selectionchange', function() {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+      hideToolbar();
+      return;
+    }
+    // Only activate inside .analysis-div elements
+    let node = sel.anchorNode;
+    let el = node && (node.nodeType === 1 ? node : node.parentElement);
+    let inside = false;
+    while (el) {
+      if (el.classList && el.classList.contains('analysis-div')) { inside = true; break; }
+      el = el.parentElement;
+    }
+    if (!inside) { hideToolbar(); return; }
+    positionToolbar(sel);
+  });
+
+  function positionToolbar(sel) {
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    toolbar.classList.add('visible');
+    const tbW = toolbar.offsetWidth;
+    const tbH = toolbar.offsetHeight;
+    let left = rect.left + rect.width / 2 - tbW / 2 + window.scrollX;
+    let top  = rect.top - tbH - 8 + window.scrollY;
+    left = Math.max(8 + window.scrollX, Math.min(left, window.innerWidth - tbW - 8 + window.scrollX));
+    if (top < window.scrollY + 8) top = rect.bottom + 8 + window.scrollY;
+    toolbar.style.left = left + 'px';
+    toolbar.style.top  = top  + 'px';
+  }
+
+  function hideToolbar() {
+    toolbar.classList.remove('visible');
+  }
+})();
 </script>
 
 </body>
