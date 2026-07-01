@@ -15,6 +15,14 @@
     "global": "",
     "risk": ""
   },
+  "300570": {
+    "industry": "太辰光是 A 股里最接近“<strong data-start=\"180\" data-end=\"207\">MT 插芯 + MPO 接头 + 高速光连接器</strong>”完整链条的公司。它不是只做跳线，而是<b>具备光互联元件、光纤连接器及相关组件能力</b>；其参股体系中的深圳<b>特思路</b>已量产 12 芯、16 芯、24 芯 MT 插芯，因此具备进入 MPO 核心部件环节的基础。MPO 需求的上游来自 AI 数据中心扩容、800G/1.6T 并行光链路和高密度布线；下游则是海外布线厂商、云数据中心及通信设备客户。太辰光的优势是产品位置更靠近核心部件，弱点是高端客户验证和海外客户份额仍决定其真实业绩弹性。",
+    "products": "<p data-start=\"115\" data-end=\"284\" class=\"PDq2pG_selectionAnchorContainer\"><strong data-start=\"115\" data-end=\"191\"><u><font color=\"#ef4444\">光器件产品：</font>2025 年收入 15.15 亿元，<font color=\"#ef4444\">占比 97.96%</font>；毛利约 5.80 亿元，<font color=\"#ef4444\">毛利率约 38.3%</font>，贡献公司主营毛利约 98%+。</u></strong><br data-start=\"191\" data-end=\"194\">\n该类覆盖光纤连接器、MPO/MTP 高密度连接器、MT 插芯、光分路器件等，是公司绝对核心收入和利润来源；MPO、MT 插芯都归在这一大类中，但公司未单独披露 MPO 收入和毛利。<span aria-hidden=\"true\" class=\"PDq2pG_selectionAnchor\"></span></p><p data-start=\"115\" data-end=\"284\" class=\"PDq2pG_selectionAnchorContainer\"><br></p>\n<p data-start=\"286\" data-end=\"360\"><u><strong data-start=\"286\" data-end=\"333\">光传感产品：</strong><span data-start=\"286\" data-end=\"333\">2025 年收入约 367 万元，占比 0.24%；对整体毛利贡献可忽略。</span></u><br data-start=\"333\" data-end=\"336\">\n主要为光纤传感相关产品，不属于 MPO 主逻辑。</p><p data-start=\"286\" data-end=\"360\"><br></p>\n<p data-start=\"408\" data-end=\"538\"><span data-start=\"408\" data-end=\"500\"><u>2026Q1：公司整体营收 3.41 亿元，同比下降 8.04%；归母净利润 0.66 亿元，同比下降 17.12%。</u></span><span class=\"\" data-state=\"closed\"></span></p><p data-start=\"408\" data-end=\"538\"><span style=\"font-family: inherit;\">太辰光</span><span style=\"font-family: inherit;\">2026Q1 总体收入同比下滑，也说明当前<b>市场热度尚未在单季报表中直接体现为整体高增长</b>。</span></p>",
+    "earnings": "<p data-start=\"714\" data-end=\"890\" class=\"PDq2pG_selectionAnchorContainer\">短期业绩验证重点不是“有没有 MPO 概念”，而是高速连接器、MT 插芯和高端低损耗产品是否在半年报、年报中体现为收入增速和毛利率提升。若 16 芯、低损耗产品放量，公司有机会同时获得出货增长和结构升级；但若仍以常规连接器、代工型订单为主，收入增长不一定带来明显估值重估。核心观察窗口是 <strong data-start=\"858\" data-end=\"889\">2026 年中报、2026 年三季报、2026 年年报</strong>。<span aria-hidden=\"true\" class=\"PDq2pG_selectionAnchor\"></span></p>\n<h3 data-section-id=\"1ihhjh8\" data-start=\"892\" data-end=\"902\"></h3>",
+    "bull": "A 股中少数具备 MT 插芯实际量产能力的 MPO 标的，题材纯度高于单纯跳线厂商。受益于 12 芯向 16 芯、普通产品向低损耗单模产品升级。",
+    "global": "北美 AI 数据中心高端 MPO 供应链仍主要由 <b>US Conec、Senko、藤仓</b>等海外体系占据，<b>国内厂商的机会更多来自代工、供应链替代和部分客户认证</b>。太辰光海外业务基础较强，但是否直接进入云厂商核心供应链、具体客户份额及 MPO 产品占比，需要以公司公告和财报为准，不能仅凭市场传闻判断。",
+    "risk": "MT 插芯“能量产”不等于“高端低损耗产品已大量出货”。"
+  },
   "688048": {
     "industry": "",
     "products": "工业级高功率半导体激光器起家，核心技术是让激光器发出更强的光，然后往光通信方向横向扩展。\n1. 高功率激光芯片（基本盘，占收入大头）：下游是工业光纤激光器（切割、焊接），和AI没关系。\n2. VCSEL芯片\n3. 光通信芯片（转型方向，增长最快但仍小）：100G EML芯片已经实现量产并批量交付，200G EML芯片正在客户验证阶段",
